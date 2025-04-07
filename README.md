@@ -46,6 +46,7 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 |-------|-------------|---------|---------|
 | `auth_token` | LocalStack Pro authentication token | `None` | `dagger call state --auth-token=<your-token>` |
 | `load` | Name of the LocalStack Cloud Pod to load | `None` | `dagger call state --load=my-pod` |
+| `save` | Name of the LocalStack Cloud Pod to save | `None` | `dagger call state --save=my-pod` |
 
 ## Usage
 

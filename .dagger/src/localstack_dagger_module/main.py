@@ -72,16 +72,18 @@ class LocalstackDaggerModule:
     def state(
         self,
         auth_token: str,
-        load: Optional[str] = None
+        load: Optional[str] = None,
+        save: Optional[str] = None
     ) -> str:
-        """Load a LocalStack Cloud Pod state into a running LocalStack instance.
+        """Load or save a LocalStack Cloud Pod state.
         
         Args:
             auth_token: LocalStack auth token (required)
             load: Name of the Cloud Pod to load
+            save: Name of the Cloud Pod to save
             
         Returns:
-            Output from the pod load command or error message if LocalStack is not running
+            Output from the pod operation or error message if LocalStack is not running
         """
         # Calculate state secret
         state_secret = base64.b64encode(auth_token.encode("utf-8")).decode("utf-8")
@@ -101,8 +103,21 @@ class LocalstackDaggerModule:
         except:
             return "Error: LocalStack is not running. Please start it first using the serve function."
             
-        # Execute the pod load request if a pod name is provided
-        if load:
+        # Execute the pod operation based on the provided parameters
+        if save:
+            save_cmd = container.with_exec([
+                "curl", "-s", "-f",
+                "-X", "POST",
+                f"http://host.docker.internal:4566/_localstack/pods/{save}",
+                "-H", "Content-Type: application/json",
+                "-H", f"x-localstack-state-secret: {state_secret}",
+                "-d", "{}"
+            ])
+            try:
+                return save_cmd.stdout()
+            except:
+                return f"Error: Failed to save pod '{save}'. Please check the pod name and your auth token."
+        elif load:
             load_cmd = container.with_exec([
                 "curl", "-s", "-f",
                 "-X", "PUT",
@@ -116,4 +131,4 @@ class LocalstackDaggerModule:
             except:
                 return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
             
-        return "No pod name provided to load"
+        return "No operation specified. Please provide either --load or --save parameter."
