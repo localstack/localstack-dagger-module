@@ -2,6 +2,7 @@ import os
 import dagger
 from dagger import dag, function, object_type
 from typing import Optional
+import base64
 
 
 @object_type
@@ -66,3 +67,53 @@ class LocalstackDaggerModule:
             
         # Return as service
         return container.as_service()
+
+    @function
+    def state(
+        self,
+        auth_token: str,
+        load: Optional[str] = None
+    ) -> str:
+        """Load a LocalStack Cloud Pod state into a running LocalStack instance.
+        
+        Args:
+            auth_token: LocalStack auth token (required)
+            load: Name of the Cloud Pod to load
+            
+        Returns:
+            Output from the pod load command or error message if LocalStack is not running
+        """
+        # Calculate state secret
+        state_secret = base64.b64encode(auth_token.encode("utf-8")).decode("utf-8")
+        
+        # Create a minimal container just for making HTTP requests
+        container = (
+            dag.container()
+            .from_("curlimages/curl:latest")
+        )
+            
+        # Check if LocalStack is running
+        try:
+            health_check = container.with_exec(
+                ["curl", "-s", "-f", "http://host.docker.internal:4566/_localstack/info"]
+            )
+            health_check.sync()
+        except:
+            return "Error: LocalStack is not running. Please start it first using the serve function."
+            
+        # Execute the pod load request if a pod name is provided
+        if load:
+            load_cmd = container.with_exec([
+                "curl", "-s", "-f",
+                "-X", "PUT",
+                f"http://host.docker.internal:4566/_localstack/pods/{load}",
+                "-H", "Content-Type: application/json",
+                "-H", f"x-localstack-state-secret: {state_secret}",
+                "-d", "{}"
+            ])
+            try:
+                return load_cmd.stdout()
+            except:
+                return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
+            
+        return "No pod name provided to load"

@@ -31,12 +31,21 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 
 ### Configuration
 
+#### `serve`
+
 | Input | Description | Default | Example |
 |-------|-------------|---------|---------|
 | `auth_token` | LocalStack Pro authentication token | `None` | `dagger call serve --auth-token=<your-token>` |
 | `configuration` | Configuration variables for LocalStack container | `None` | `dagger call serve --configuration='DEBUG=1,PERSISTENCE=1'` |
 | `docker-sock` | Unix socket path for Docker daemon | `None` | `dagger call serve --docker-sock=/var/run/docker.sock` |
 | `image-name` | Custom LocalStack image name | `None` | `dagger call serve --image-name=localstack/snowflake:latest` |
+
+#### `state`
+
+| Input | Description | Default | Example |
+|-------|-------------|---------|---------|
+| `auth_token` | LocalStack Pro authentication token | `None` | `dagger call state --auth-token=<your-token>` |
+| `load` | Name of the LocalStack Cloud Pod to load | `None` | `dagger call state --load=my-pod` |
 
 ## Usage
 
