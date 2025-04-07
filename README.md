@@ -44,9 +44,10 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 
 | Input | Description | Default | Example |
 |-------|-------------|---------|---------|
-| `auth_token` | LocalStack Pro authentication token | `None` | `dagger call state --auth-token=<your-token>` |
+| `auth_token` | LocalStack Pro authentication token (required for save/load) | `None` | `dagger call state --auth-token=<your-token>` |
 | `load` | Name of the LocalStack Cloud Pod to load | `None` | `dagger call state --load=my-pod` |
 | `save` | Name of the LocalStack Cloud Pod to save | `None` | `dagger call state --save=my-pod` |
+| `reset` | Reset the LocalStack state | `False` | `dagger call state --reset` |
 
 ## Usage
 
@@ -62,6 +63,15 @@ dagger call serve up --ports 4566:4566
 ```bash
 # Basic start
 dagger call serve --auth-token=<your-token> up --ports 4566:4566 --ports 443:443
+
+# Save current state to a Cloud Pod (requires auth token)
+dagger call state --auth-token=<your-token> --save=my-pod
+
+# Load state from a Cloud Pod (requires auth token)
+dagger call state --auth-token=<your-token> --load=my-pod
+
+# Reset LocalStack state (no auth token required)
+dagger call state --reset
 ```
 
 ## Development

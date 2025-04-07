@@ -71,23 +71,22 @@ class LocalstackDaggerModule:
     @function
     def state(
         self,
-        auth_token: str,
+        auth_token: Optional[str] = None,
         load: Optional[str] = None,
-        save: Optional[str] = None
+        save: Optional[str] = None,
+        reset: bool = False
     ) -> str:
-        """Load or save a LocalStack Cloud Pod state.
+        """Load, save, or reset LocalStack state.
         
         Args:
-            auth_token: LocalStack auth token (required)
+            auth_token: LocalStack auth token (required for save/load operations)
             load: Name of the Cloud Pod to load
             save: Name of the Cloud Pod to save
+            reset: Reset the LocalStack state
             
         Returns:
             Output from the pod operation or error message if LocalStack is not running
         """
-        # Calculate state secret
-        state_secret = base64.b64encode(auth_token.encode("utf-8")).decode("utf-8")
-        
         # Create a minimal container just for making HTTP requests
         container = (
             dag.container()
@@ -102,6 +101,26 @@ class LocalstackDaggerModule:
             health_check.sync()
         except:
             return "Error: LocalStack is not running. Please start it first using the serve function."
+            
+        # Handle reset operation
+        if reset:
+            reset_cmd = container.with_exec([
+                "curl", "-s", "-f",
+                "-X", "POST",
+                "http://host.docker.internal:4566/_localstack/state/reset"
+            ])
+            try:
+                return reset_cmd.stdout()
+            except:
+                return "Error: Failed to reset LocalStack state."
+            
+        # For save and load operations, auth_token is required
+        if (save or load) and not auth_token:
+            return "Error: auth_token is required for save and load operations."
+            
+        # Calculate state secret if auth_token is provided
+        if auth_token:
+            state_secret = base64.b64encode(auth_token.encode("utf-8")).decode("utf-8")
             
         # Execute the pod operation based on the provided parameters
         if save:
@@ -131,4 +150,4 @@ class LocalstackDaggerModule:
             except:
                 return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
             
-        return "No operation specified. Please provide either --load or --save parameter."
+        return "No operation specified. Please provide either --load, --save, or --reset parameter."
