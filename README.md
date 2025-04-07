@@ -12,6 +12,7 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
     - All Community Edition ports
     - 127.0.0.1:443:443 (HTTPS endpoint)
 - Configurable environment variables for LocalStack customization
+- Docker socket mounting for container interactions
 
 ## Prerequisites
 
@@ -34,6 +35,7 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 |-------|-------------|---------|---------|
 | `auth_token` | LocalStack Pro authentication token | `None` | `dagger call serve --auth-token=<your-token>` |
 | `configuration` | Configuration variables for LocalStack container | `None` | `dagger call serve --configuration='DEBUG=1,PERSISTENCE=1'` |
+| `docker_sock` | Unix socket path for Docker daemon | `None` | `dagger call serve --docker-sock=/var/run/docker.sock` |
 
 ## Usage
 
