@@ -11,11 +11,13 @@ class LocalstackDaggerModule:
         self, 
         auth_token: Optional[str] = None,
         configuration: Optional[str] = None,
-        docker_sock: Optional[dagger.Socket] = None
+        docker_sock: Optional[dagger.Socket] = None,
+        image_name: Optional[str] = None
     ) -> dagger.Service:
         """Start a LocalStack service with appropriate configuration.
         
-        If auth_token is provided, starts LocalStack Pro edition.
+        If image_name is provided, starts that specific image.
+        If auth_token is provided but no image_name, starts LocalStack Pro edition.
         Otherwise starts LocalStack Community edition.
         
         Args:
@@ -23,12 +25,16 @@ class LocalstackDaggerModule:
             configuration: Optional string of configuration variables in format "KEY1=value1,KEY2=value2"
                          Example: "DEBUG=1,LS_LOG=trace"
             docker_sock: Optional Docker socket for container interactions
+            image_name: Optional custom LocalStack image name to use
             
         Returns:
             A running LocalStack service container
         """
-        # Determine image based on auth token
-        image = "localstack/localstack-pro:latest" if auth_token else "localstack/localstack:latest"
+        # Determine image based on parameters
+        if image_name:
+            image = image_name
+        else:
+            image = "localstack/localstack-pro:latest" if auth_token else "localstack/localstack:latest"
         
         # Start with base container config
         container = dag.container().from_(image)
