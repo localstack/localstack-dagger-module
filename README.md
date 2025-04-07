@@ -8,10 +8,10 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 - Automatic port mapping for:
   - Community Edition:
     - 127.0.0.1:4566:4566 (Main LocalStack endpoint)
-    - 127.0.0.1:4510-4559:4510-4559 (Service-specific ports)
   - Pro Edition:
     - All Community Edition ports
     - 127.0.0.1:443:443 (HTTPS endpoint)
+- Configurable environment variables for LocalStack customization
 
 ## Prerequisites
 
@@ -19,26 +19,37 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 - Docker or compatible container runtime
 - LocalStack Pro auth token (optional, only for Pro edition)
 
+## Inputs
+
+### Required Ports
+
+| Port | Description | Edition |
+|------|-------------|---------|
+| 4566 | Main LocalStack endpoint | Community & Pro |
+| 443 | HTTPS endpoint | Pro only |
+
+### Configuration
+
+| Input | Description | Default | Example |
+|-------|-------------|---------|---------|
+| `auth_token` | LocalStack Pro authentication token | `None` | `dagger call serve --auth-token=<your-token>` |
+| `configuration` | Configuration variables for LocalStack container | `None` | `dagger call serve --configuration='DEBUG=1,PERSISTENCE=1'` |
+
 ## Usage
 
 ### Start LocalStack Community Edition
 
 ```bash
-# Start the service with port mappings
-dagger call serve up --ports 4566:4566 --ports 4510-4559:4510-4559
+# Basic start
+dagger call serve up --ports 4566:4566
 ```
 
 ### Start LocalStack Pro Edition
 
 ```bash
-# Start the service with port mappings including HTTPS port
-dagger call serve --auth-token=<your-localstack-auth-token> up --ports 4566:4566 --ports 4510-4559:4510-4559 --ports 443:443
+# Basic start
+dagger call serve --auth-token=<your-token> up --ports 4566:4566 --ports 443:443
 ```
-
-The service will be available at:
-- Main endpoint: http://localhost:4566
-- Service-specific ports: 4510-4559
-- HTTPS endpoint (Pro only): https://localhost:443
 
 ## Development
 

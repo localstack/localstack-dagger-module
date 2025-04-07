@@ -1,20 +1,26 @@
 import os
 import dagger
-from dagger import dag, function, object_type, client
+from dagger import dag, function, object_type
 from typing import Optional
 
 
 @object_type
 class LocalstackDaggerModule:
     @function
-    def serve(self, auth_token: Optional[str] = None) -> dagger.Service:
-        """Start a LocalStack service with appropriate configuration based on auth token.
+    def serve(
+        self, 
+        auth_token: Optional[str] = None,
+        configuration: Optional[str] = None
+    ) -> dagger.Service:
+        """Start a LocalStack service with appropriate configuration.
         
         If auth_token is provided, starts LocalStack Pro edition.
         Otherwise starts LocalStack Community edition.
         
         Args:
             auth_token: Optional LocalStack auth token for Pro edition
+            configuration: Optional string of configuration variables in format "KEY1=value1,KEY2=value2"
+                         Example: "DEBUG=1,LS_LOG=trace"
             
         Returns:
             A running LocalStack service container
@@ -28,6 +34,13 @@ class LocalstackDaggerModule:
         # Add auth token if provided
         if auth_token:
             container = container.with_env_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
+            
+        # Add configuration variables if provided
+        if configuration:
+            for config_pair in configuration.split(','):
+                if '=' in config_pair:
+                    key, value = config_pair.strip().split('=', 1)
+                    container = container.with_env_variable(key, value)
             
         # Add common ports (4566 and 4510-4559)
         container = (
