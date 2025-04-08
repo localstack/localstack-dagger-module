@@ -3,6 +3,9 @@ import dagger
 from dagger import dag, function, object_type
 from typing import Optional
 import base64
+from datetime import datetime
+import requests
+import json
 
 
 @object_type
@@ -69,7 +72,7 @@ class LocalstackDaggerModule:
         return container.as_service()
 
     @function
-    def state(
+    async def state(
         self,
         auth_token: Optional[dagger.Secret] = None,
         load: Optional[str] = None,
@@ -87,7 +90,7 @@ class LocalstackDaggerModule:
         Returns:
             Output from the pod operation or error message if LocalStack is not running
         """
-        # Create a minimal container just for making HTTP requests
+        # Create a minimal container for making HTTP requests
         container = (
             dag.container()
             .from_("curlimages/curl:latest")
@@ -95,31 +98,41 @@ class LocalstackDaggerModule:
             
         # Check if LocalStack is running
         try:
-            health_check = container.with_exec(
+            health_check = container.with_env_variable(
+                # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
+                "CACHEBUSTER", 
+                str(datetime.now())
+            ).with_exec(
                 ["curl", "-s", "-f", "http://host.docker.internal:4566/_localstack/info"]
             )
-            health_check.sync()
+            await health_check.sync()
         except:
             return "Error: LocalStack is not running. Please start it first using the serve function."
             
         # Handle reset operation
         if reset:
-            reset_cmd = container.with_exec([
-                "curl", "-s", "-f",
-                "-X", "POST",
-                "http://host.docker.internal:4566/_localstack/state/reset"
-            ])
             try:
-                return reset_cmd.stdout()
-            except:
-                return "Error: Failed to reset LocalStack state."
+                status_code = await container.with_env_variable(
+                    # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
+                    "CACHEBUSTER", 
+                    str(datetime.now())
+                ).with_exec([
+                    "curl", "-s", "-I",
+                    "-X", "POST",
+                    "http://host.docker.internal:4566/_localstack/state/reset"
+                ]).stdout()
+                
+                if "200 OK" in status_code:
+                    return "LocalStack state reset successfully."
+                else:
+                    return f"Error: Reset failed. Server response: {status_code}"
+            except Exception as e:
+                return f"Error: Reset failed: {str(e)}"
             
-        # For save and load operations, auth_token is required
         if (save or load) and not auth_token:
             return "Error: auth_token is required for save and load operations."
             
-        # Get auth token and calculate state secret
-        if auth_token:
+        if (save or load) and auth_token:
             # Use a separate container to calculate state secret to avoid exposing token
             state_secret_container = (
                 dag.container()
@@ -127,37 +140,184 @@ class LocalstackDaggerModule:
                 .with_secret_variable("AUTH_TOKEN", auth_token)
                 .with_exec(["python", "-c", "import os,base64; print(base64.b64encode(os.environ['AUTH_TOKEN'].encode()).decode())"])
             )
-            state_secret = state_secret_container.stdout()
+            state_secret = await state_secret_container.stdout()
             
             # Add auth token to main container
             container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
             
-        # Execute the pod operation based on the provided parameters
-        if save:
-            save_cmd = container.with_exec([
-                "curl", "-s", "-f",
-                "-X", "POST",
-                f"http://host.docker.internal:4566/_localstack/pods/{save}",
-                "-H", "Content-Type: application/json",
-                "-H", f"x-localstack-state-secret: {state_secret}",
-                "-d", "{}"
-            ])
-            try:
-                return save_cmd.stdout()
-            except:
-                return f"Error: Failed to save pod '{save}'. Please check the pod name and your auth token."
-        elif load:
-            load_cmd = container.with_exec([
-                "curl", "-s", "-f",
-                "-X", "PUT",
-                f"http://host.docker.internal:4566/_localstack/pods/{load}",
-                "-H", "Content-Type: application/json",
-                "-H", f"x-localstack-state-secret: {state_secret}",
-                "-d", "{}"
-            ])
-            try:
-                return load_cmd.stdout()
-            except:
-                return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
+            # Execute the pod operation based on the provided parameters
+            if save:
+                try:
+                    response = await container.with_env_variable(
+                        # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
+                        "CACHEBUSTER", 
+                        str(datetime.now())
+                    ).with_exec([
+                        "curl", "-s", "-f",
+                        "-X", "POST",
+                        f"http://host.docker.internal:4566/_localstack/pods/{save}",
+                        "-H", "Content-Type: application/json",
+                        "-H", f"x-localstack-state-secret: {state_secret}",
+                        "-d", "{}"
+                    ]).stdout()
+                    return response
+                except:
+                    return f"Error: Failed to save pod '{save}'. Please check the pod name and your auth token."
+            elif load:
+                try:
+                    response = await container.with_env_variable(
+                        # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
+                        "CACHEBUSTER", 
+                        str(datetime.now())
+                    ).with_exec([
+                        "curl", "-s", "-f",
+                        "-X", "PUT",
+                        f"http://host.docker.internal:4566/_localstack/pods/{load}",
+                        "-H", "Content-Type: application/json",
+                        "-H", f"x-localstack-state-secret: {state_secret}",
+                        "-d", "{}"
+                    ]).stdout()
+                    return response
+                except:
+                    return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
             
         return "No operation specified. Please provide either --load, --save, or --reset parameter."
+
+    @function
+    async def ephemeral(
+        self,
+        auth_token: dagger.Secret,
+        operation: str,
+        name: Optional[str] = None,
+        lifetime: Optional[int] = None,
+        auto_load_pod: Optional[str] = None,
+        extension_auto_install: Optional[str] = None
+    ) -> str:
+        """Manage ephemeral LocalStack instances in the cloud.
+        
+        Args:
+            auth_token: LocalStack auth token (required)
+            operation: Operation to perform (create, list, delete, logs)
+            name: Name of the ephemeral instance (required for create, delete, logs)
+            lifetime: Lifetime of the instance in minutes (optional, default: 60)
+            auto_load_pod: Auto load pod configuration (optional)
+            extension_auto_install: Extension auto install configuration (optional)
+            
+        Returns:
+            Response from the API operation
+        """
+        if not auth_token:
+            return "Error: auth_token is required for ephemeral instance operations"
+
+        # Base API endpoint
+        api_endpoint = "https://api.localstack.cloud/v1"
+        
+        # Get auth token value from secret
+        auth_token_value = await auth_token.plaintext()
+        
+        # Common headers
+        headers = {
+            "content-type": "application/json",
+            "ls-api-key": auth_token_value
+        }
+
+        if operation == "create":
+            if not name:
+                return "Error: name is required for create operation"
+                
+            # First check if instance exists
+            try:
+                list_response = requests.get(
+                    f"{api_endpoint}/compute/instances",
+                    headers=headers
+                ).json()
+                
+                # Check if instance exists
+                instance_exists = any(
+                    instance.get("instance_name") == name 
+                    for instance in list_response
+                )
+                
+                if instance_exists:
+                    # Delete existing instance
+                    requests.delete(
+                        f"{api_endpoint}/compute/instances/{name}",
+                        headers=headers
+                    )
+            except Exception as e:
+                pass
+                
+            data = {
+                "instance_name": name,
+                "lifetime": lifetime or 60,
+            }
+            
+            # Only add env_vars if either auto_load_pod or extension_auto_install is provided
+            if auto_load_pod or extension_auto_install:
+                env_vars = {}
+                if auto_load_pod:
+                    env_vars["AUTO_LOAD_POD"] = auto_load_pod
+                if extension_auto_install:
+                    env_vars["EXTENSION_AUTO_INSTALL"] = extension_auto_install
+                data["env_vars"] = env_vars
+            
+            try:
+                response = requests.post(
+                    f"{api_endpoint}/compute/instances",
+                    headers=headers,
+                    json=data
+                ).json()
+
+                return json.dumps(response, indent=2)
+            except Exception as e:
+                return f"Error: Failed to create ephemeral instance '{name}': {str(e)}"
+
+        elif operation == "list":
+            try:
+                response = requests.get(
+                    f"{api_endpoint}/compute/instances",
+                    headers=headers
+                ).json()
+                return json.dumps(response, indent=2)
+            except Exception as e:
+                return f"Error: Failed to list ephemeral instances: {str(e)}"
+
+        elif operation == "delete":
+            if not name:
+                return "Error: name is required for delete operation"
+                
+            try:
+                requests.delete(
+                    f"{api_endpoint}/compute/instances/{name}",
+                    headers=headers
+                )
+                return f"Successfully deleted instance: {name}"
+            except Exception as e:
+                return f"Error: Failed to delete ephemeral instance '{name}': {str(e)}"
+
+        elif operation == "logs":
+            if not name:
+                return "Error: name is required for logs operation"
+                
+            try:
+                response = requests.get(
+                    f"{api_endpoint}/compute/instances/{name}/logs",
+                    headers=headers
+                ).json()
+                
+                if not response:
+                    return "No logs available for this instance."
+                
+                # Format logs with each line on a new line
+                log_output = []
+                for log_line in response:
+                    content = log_line.get('content', '')
+                    if content:
+                        log_output.append(content)
+                
+                return "\n".join(log_output) if log_output else "No log content available."
+            except Exception as e:
+                return f"Error: Failed to fetch logs for instance '{name}': {str(e)}"
+
+        else:
+            return "Error: Invalid operation. Supported operations are: create, list, delete, logs"
