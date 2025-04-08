@@ -28,7 +28,7 @@ This module uses Dagger's secret management system to handle sensitive data like
 
 ```bash
 export LOCALSTACK_AUTH_TOKEN=your-token-here
-dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up --ports 4566:4566 --ports 443:443
+dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up
 ```
 
 The token will be then securely handled by Dagger and never exposed in logs or command output.
@@ -71,7 +71,7 @@ The token will be then securely handled by Dagger and never exposed in logs or c
 | `name` | Name of the ephemeral instance | Required for `create`/`delete`/`logs` | `dagger call ephemeral --name=my-instance` |
 | `lifetime` | Lifetime of the instance in minutes (`create` operation only) | 60 | `dagger call ephemeral --lifetime=120` |
 | `auto-load-pod` | Pod configuration to auto-load (`create` operation only) | `None` | `dagger call ephemeral --auto-load-pod=my-pod` |
-| `extension-auto-install` | Extension to auto-install (`create` operation only) | `None` | `dagger call ephemeral --extension-auto-install=my-extension` |
+| `extension-auto-install` | Extension to auto-install (`create` operation only) | `None` | `dagger call ephemeral --extension-auto-install=my-extension --operation=create` |
 
 ## Usage
 
@@ -79,7 +79,7 @@ The token will be then securely handled by Dagger and never exposed in logs or c
 
 ```bash
 # Basic start
-dagger call serve up --ports 4566:4566
+dagger call serve up
 ```
 
 ### Start LocalStack Pro Edition
@@ -89,7 +89,7 @@ dagger call serve up --ports 4566:4566
 export LOCALSTACK_AUTH_TOKEN=your-token-here
 
 # Basic start with auth token from environment
-dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up --ports 4566:4566 --ports 443:443
+dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up
 ```
 
 ## Development
