@@ -90,43 +90,23 @@ class LocalstackDaggerModule:
         Returns:
             Output from the pod operation or error message if LocalStack is not running
         """
-        # Create a minimal container for making HTTP requests
-        container = (
-            dag.container()
-            .from_("curlimages/curl:latest")
-        )
-            
+        # Base URL for LocalStack API
+        localstack_url = "http://host.docker.internal:4566"
+        
         # Check if LocalStack is running
         try:
-            health_check = container.with_env_variable(
-                # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
-                "CACHEBUSTER", 
-                str(datetime.now())
-            ).with_exec(
-                ["curl", "-s", "-f", "http://host.docker.internal:4566/_localstack/info"]
-            )
-            await health_check.sync()
-        except:
+            health_response = requests.get(f"{localstack_url}/_localstack/info")
+            health_response.raise_for_status()
+        except requests.RequestException:
             return "Error: LocalStack is not running. Please start it first using the serve function."
             
         # Handle reset operation
         if reset:
             try:
-                status_code = await container.with_env_variable(
-                    # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
-                    "CACHEBUSTER", 
-                    str(datetime.now())
-                ).with_exec([
-                    "curl", "-s", "-I",
-                    "-X", "POST",
-                    "http://host.docker.internal:4566/_localstack/state/reset"
-                ]).stdout()
-                
-                if "200 OK" in status_code:
-                    return "LocalStack state reset successfully."
-                else:
-                    return f"Error: Reset failed. Server response: {status_code}"
-            except Exception as e:
+                reset_response = requests.post(f"{localstack_url}/_localstack/state/reset")
+                reset_response.raise_for_status()
+                return "LocalStack state reset successfully."
+            except requests.RequestException as e:
                 return f"Error: Reset failed: {str(e)}"
             
         if (save or load) and not auth_token:
@@ -137,48 +117,39 @@ class LocalstackDaggerModule:
             state_secret_container = (
                 dag.container()
                 .from_("python:3.9-slim")
-                .with_secret_variable("AUTH_TOKEN", auth_token)
-                .with_exec(["python", "-c", "import os,base64; print(base64.b64encode(os.environ['AUTH_TOKEN'].encode()).decode())"])
+                .with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
+                .with_exec(["python", "-c", "import os,base64; print(base64.b64encode(os.environ['LOCALSTACK_AUTH_TOKEN'].encode()).decode())"])
             )
             state_secret = await state_secret_container.stdout()
             
-            # Add auth token to main container
-            container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
+            # Common headers
+            headers = {
+                "Content-Type": "application/json",
+                "x-localstack-state-secret": state_secret.strip()
+            }
             
             # Execute the pod operation based on the provided parameters
             if save:
                 try:
-                    response = await container.with_env_variable(
-                        # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
-                        "CACHEBUSTER", 
-                        str(datetime.now())
-                    ).with_exec([
-                        "curl", "-s", "-f",
-                        "-X", "POST",
-                        f"http://host.docker.internal:4566/_localstack/pods/{save}",
-                        "-H", "Content-Type: application/json",
-                        "-H", f"x-localstack-state-secret: {state_secret}",
-                        "-d", "{}"
-                    ]).stdout()
-                    return response
-                except:
+                    save_response = requests.post(
+                        f"{localstack_url}/_localstack/pods/{save}",
+                        headers=headers,
+                        json={}
+                    )
+                    save_response.raise_for_status()
+                    return save_response.text
+                except requests.RequestException:
                     return f"Error: Failed to save pod '{save}'. Please check the pod name and your auth token."
             elif load:
                 try:
-                    response = await container.with_env_variable(
-                        # Dirty hack to avoid caching. Reference: https://docs.dagger.io/cookbook/#invalidate-cache
-                        "CACHEBUSTER", 
-                        str(datetime.now())
-                    ).with_exec([
-                        "curl", "-s", "-f",
-                        "-X", "PUT",
-                        f"http://host.docker.internal:4566/_localstack/pods/{load}",
-                        "-H", "Content-Type: application/json",
-                        "-H", f"x-localstack-state-secret: {state_secret}",
-                        "-d", "{}"
-                    ]).stdout()
-                    return response
-                except:
+                    load_response = requests.put(
+                        f"{localstack_url}/_localstack/pods/{load}",
+                        headers=headers,
+                        json={}
+                    )
+                    load_response.raise_for_status()
+                    return load_response.text
+                except requests.RequestException:
                     return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
             
         return "No operation specified. Please provide either --load, --save, or --reset parameter."
