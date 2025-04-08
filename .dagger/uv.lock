@@ -296,10 +296,14 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "dagger-io" },
+    { name = "requests" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "dagger-io", editable = "sdk" }]
+requires-dist = [
+    { name = "dagger-io", editable = "sdk" },
+    { name = "requests" },
+]
 
 [[package]]
 name = "markdown-it-py"
