@@ -5,6 +5,7 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 ## Features
 
 - Supports both LocalStack Community and Pro editions
+- Secure handling of authentication tokens using Dagger secrets
 - Automatic port mapping for:
   - Community Edition:
     - 127.0.0.1:4566:4566 (Main LocalStack endpoint)
@@ -19,6 +20,17 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 - Dagger CLI installed
 - Docker or compatible container runtime
 - LocalStack Pro auth token (optional, only for Pro edition)
+
+## Security
+
+This module uses Dagger's secret management system to handle sensitive data like authentication tokens securely. The auth token can be passed using an environment variable:
+
+```bash
+export LOCALSTACK_AUTH_TOKEN=your-token-here
+dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up --ports 4566:4566 --ports 443:443
+```
+
+The token will be then securely handled by Dagger and never exposed in logs or command output.
 
 ## Inputs
 
@@ -35,7 +47,7 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 
 | Input | Description | Default | Example |
 |-------|-------------|---------|---------|
-| `auth_token` | LocalStack Pro authentication token | `None` | `dagger call serve --auth-token=<your-token>` |
+| `auth-token` | LocalStack Pro auth token (as Dagger secret) | `None` | `dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN` |
 | `configuration` | Configuration variables for LocalStack container | `None` | `dagger call serve --configuration='DEBUG=1,PERSISTENCE=1'` |
 | `docker-sock` | Unix socket path for Docker daemon | `None` | `dagger call serve --docker-sock=/var/run/docker.sock` |
 | `image-name` | Custom LocalStack image name | `None` | `dagger call serve --image-name=localstack/snowflake:latest` |
@@ -44,7 +56,7 @@ A Dagger module for running LocalStack (Community and Pro editions) as a service
 
 | Input | Description | Default | Example |
 |-------|-------------|---------|---------|
-| `auth_token` | LocalStack Pro authentication token (required for save/load) | `None` | `dagger call state --auth-token=<your-token>` |
+| `auth-token` | LocalStack auth token (as Dagger secret, required for save/load) | `None` | `dagger call state --auth-token=env:LOCALSTACK_AUTH_TOKEN` |
 | `load` | Name of the LocalStack Cloud Pod to load | `None` | `dagger call state --load=my-pod` |
 | `save` | Name of the LocalStack Cloud Pod to save | `None` | `dagger call state --save=my-pod` |
 | `reset` | Reset the LocalStack state | `False` | `dagger call state --reset` |
@@ -61,17 +73,11 @@ dagger call serve up --ports 4566:4566
 ### Start LocalStack Pro Edition
 
 ```bash
-# Basic start
-dagger call serve --auth-token=<your-token> up --ports 4566:4566 --ports 443:443
+# Set auth token in environment
+export LOCALSTACK_AUTH_TOKEN=your-token-here
 
-# Save current state to a Cloud Pod (requires auth token)
-dagger call state --auth-token=<your-token> --save=my-pod
-
-# Load state from a Cloud Pod (requires auth token)
-dagger call state --auth-token=<your-token> --load=my-pod
-
-# Reset LocalStack state (no auth token required)
-dagger call state --reset
+# Basic start with auth token from environment
+dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up --ports 4566:4566 --ports 443:443
 ```
 
 ## Development

@@ -10,7 +10,7 @@ class LocalstackDaggerModule:
     @function
     def serve(
         self, 
-        auth_token: Optional[str] = None,
+        auth_token: Optional[dagger.Secret] = None,
         configuration: Optional[str] = None,
         docker_sock: Optional[dagger.Socket] = None,
         image_name: Optional[str] = None
@@ -22,7 +22,7 @@ class LocalstackDaggerModule:
         Otherwise starts LocalStack Community edition.
         
         Args:
-            auth_token: Optional LocalStack auth token for Pro edition
+            auth_token: Optional secret containing LocalStack Pro auth token
             configuration: Optional string of configuration variables in format "KEY1=value1,KEY2=value2"
                          Example: "DEBUG=1,LS_LOG=trace"
             docker_sock: Optional Docker socket for container interactions
@@ -46,7 +46,7 @@ class LocalstackDaggerModule:
             
         # Add auth token if provided
         if auth_token:
-            container = container.with_env_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
+            container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
             
         # Add configuration variables if provided
         if configuration:
@@ -71,7 +71,7 @@ class LocalstackDaggerModule:
     @function
     def state(
         self,
-        auth_token: Optional[str] = None,
+        auth_token: Optional[dagger.Secret] = None,
         load: Optional[str] = None,
         save: Optional[str] = None,
         reset: bool = False
@@ -79,7 +79,7 @@ class LocalstackDaggerModule:
         """Load, save, or reset LocalStack state.
         
         Args:
-            auth_token: LocalStack auth token (required for save/load operations)
+            auth_token: Secret containing LocalStack auth token (required for save/load)
             load: Name of the Cloud Pod to load
             save: Name of the Cloud Pod to save
             reset: Reset the LocalStack state
@@ -118,9 +118,19 @@ class LocalstackDaggerModule:
         if (save or load) and not auth_token:
             return "Error: auth_token is required for save and load operations."
             
-        # Calculate state secret if auth_token is provided
+        # Get auth token and calculate state secret
         if auth_token:
-            state_secret = base64.b64encode(auth_token.encode("utf-8")).decode("utf-8")
+            # Use a separate container to calculate state secret to avoid exposing token
+            state_secret_container = (
+                dag.container()
+                .from_("python:3.9-slim")
+                .with_secret_variable("AUTH_TOKEN", auth_token)
+                .with_exec(["python", "-c", "import os,base64; print(base64.b64encode(os.environ['AUTH_TOKEN'].encode()).decode())"])
+            )
+            state_secret = state_secret_container.stdout()
+            
+            # Add auth token to main container
+            container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
             
         # Execute the pod operation based on the provided parameters
         if save:
