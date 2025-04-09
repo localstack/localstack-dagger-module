@@ -1,6 +1,9 @@
 import dagger
 from dagger import dag, function, object_type
 import requests
+import boto3
+import time
+import io
 
 
 @object_type
@@ -10,6 +13,7 @@ class Tests:
         """Run all tests"""
         await self.test_localstack_health()
         await self.test_localstack_pro(auth_token=auth_token)
+        await self.test_state_operations(auth_token=auth_token)
 
     @function
     async def test_localstack_health(self) -> str:
@@ -64,3 +68,78 @@ class Tests:
             raise Exception(f"Failed to connect to LocalStack: {str(e)}")
         except ValueError as e:
             raise Exception(f"Invalid JSON response from LocalStack: {str(e)}")
+
+    @function
+    async def test_state_operations(self, auth_token: dagger.Secret) -> str:
+        """Test LocalStack state operations (save/load/reset) with AWS resources"""
+        # Start LocalStack Pro
+        service = dag.localstack_dagger_module().serve(auth_token=auth_token)
+        await service.start()
+        endpoint = await service.endpoint()
+
+        # Configure boto3 client
+        s3 = boto3.client(
+            's3',
+            endpoint_url=f"http://{endpoint}",
+            aws_access_key_id='test',
+            aws_secret_access_key='test',
+            region_name='us-east-1'
+        )
+
+        try:
+            # Create a test bucket
+            s3.create_bucket(Bucket='test-bucket')
+
+            # Create test object
+            test_data = "Hello LocalStack"
+            s3.put_object(
+                Bucket='test-bucket',
+                Key='test.txt',
+                Body=test_data
+            )
+
+            # Save state to Cloud Pod
+            state_module = dag.localstack_dagger_module()
+            await state_module.state(
+                auth_token=auth_token,
+                save="test-dagger-pod",
+                endpoint=f"http://{endpoint}"
+            )
+
+            # Reset state
+            await state_module.state(reset=True, endpoint=f"http://{endpoint}")
+
+            time.sleep(5)
+
+            # Verify bucket is gone
+            try:
+                s3.head_bucket(Bucket='test-bucket')
+                raise Exception("State reset failed: bucket still exists")
+            except s3.exceptions.ClientError:
+                # Expected - bucket should not exist
+                pass
+
+            # Load state back
+            await state_module.state(
+                auth_token=auth_token,
+                load="test-dagger-pod",
+                endpoint=f"http://{endpoint}"
+            )
+
+            # Wait briefly for state to be loaded
+            time.sleep(5)
+
+            # Verify bucket exists
+            s3.head_bucket(Bucket='test-bucket')
+
+            # Verify object content
+            response = s3.get_object(Bucket='test-bucket', Key='test.txt')
+            content = response['Body'].read().decode('utf-8')
+
+            if content != "Hello LocalStack":
+                raise Exception(f"State load failed: object content mismatch. Expected 'Hello LocalStack', got '{content}'")
+
+            return "Success: State save/load/reset operations working correctly"
+
+        except Exception as e:
+            return f"Test failed: {str(e)}"

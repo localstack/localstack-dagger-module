@@ -77,6 +77,7 @@ class LocalstackDaggerModule:
         auth_token: Optional[dagger.Secret] = None,
         load: Optional[str] = None,
         save: Optional[str] = None,
+        endpoint: Optional[str] = None,
         reset: bool = False
     ) -> str:
         """Load, save, or reset LocalStack state.
@@ -86,12 +87,12 @@ class LocalstackDaggerModule:
             load: Name of the Cloud Pod to load
             save: Name of the Cloud Pod to save
             reset: Reset the LocalStack state
-            
+            endpoint: LocalStack endpoint to use (optional, defaults to host.docker.internal:4566)
         Returns:
             Output from the pod operation or error message if LocalStack is not running
         """
         # Base URL for LocalStack API
-        localstack_url = "http://host.docker.internal:4566"
+        localstack_url = endpoint or "http://host.docker.internal:4566"
         
         # Check if LocalStack is running
         try:
