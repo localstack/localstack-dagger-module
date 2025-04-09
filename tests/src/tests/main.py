@@ -4,6 +4,8 @@ import requests
 import boto3
 import time
 import io
+import json
+import uuid
 
 
 @object_type
@@ -14,6 +16,7 @@ class Tests:
         await self.test_localstack_health()
         await self.test_localstack_pro(auth_token=auth_token)
         await self.test_state_operations(auth_token=auth_token)
+        await self.test_ephemeral_operations(auth_token=auth_token)
 
     @function
     async def test_localstack_health(self) -> str:
@@ -143,3 +146,78 @@ class Tests:
 
         except Exception as e:
             return f"Test failed: {str(e)}"
+
+    @function
+    async def test_ephemeral_operations(self, auth_token: dagger.Secret) -> str:
+        """Test LocalStack ephemeral instance operations (create/list/logs/delete)"""
+        # Generate a unique instance name for testing
+        instance_name = f"test-instance-{uuid.uuid4().hex[:8]}"
+        
+        try:
+            # Create an ephemeral instance
+            ephemeral_module = dag.localstack_dagger_module()
+            create_response = await ephemeral_module.ephemeral(
+                auth_token=auth_token,
+                operation="create",
+                name=instance_name,
+                lifetime=5  # Short lifetime for testing
+            )
+
+            # Wait for instance to be ready
+            time.sleep(15)
+            
+            # Parse and verify create response
+            create_data = json.loads(create_response)
+            if not create_data.get("instance_name"):
+                raise Exception("Failed to create ephemeral instance: no instance_name in response")
+            
+            # List instances and verify our instance exists
+            list_response = await ephemeral_module.ephemeral(
+                auth_token=auth_token,
+                operation="list"
+            )
+            
+            list_data = json.loads(list_response)
+            instance_found = False
+            for instance in list_data:
+                if instance.get("instance_name") == instance_name:
+                    instance_found = True
+                    break
+                    
+            if not instance_found:
+                raise Exception(f"Created instance {instance_name} not found in list response")
+            
+            # Get instance logs and verify they contain version information
+            logs_response = await ephemeral_module.ephemeral(
+                auth_token=auth_token,
+                operation="logs",
+                name=instance_name
+            )
+            
+            if "version" not in logs_response.lower():
+                raise Exception("Instance logs do not contain version information")
+            
+            # Delete the instance
+            delete_response = await ephemeral_module.ephemeral(
+                auth_token=auth_token,
+                operation="delete",
+                name=instance_name
+            )
+            
+            if not delete_response.startswith("Successfully deleted"):
+                raise Exception(f"Unexpected delete response: {delete_response}")
+            
+            return "Success: Ephemeral instance operations working correctly"
+            
+        except Exception as e:
+            return f"Test failed: {str(e)}"
+        finally:
+            # Cleanup: Try to delete the instance if something went wrong
+            try:
+                await ephemeral_module.ephemeral(
+                    auth_token=auth_token,
+                    operation="delete",
+                    name=instance_name
+                )
+            except:
+                pass
