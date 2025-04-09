@@ -11,7 +11,7 @@ import json
 @object_type
 class LocalstackDaggerModule:
     @function
-    def serve(
+    def start(
         self, 
         auth_token: Optional[dagger.Secret] = None,
         configuration: Optional[str] = None,
@@ -99,7 +99,7 @@ class LocalstackDaggerModule:
             health_response = requests.get(f"{localstack_url}/_localstack/info")
             health_response.raise_for_status()
         except requests.RequestException:
-            return "Error: LocalStack is not running. Please start it first using the serve function."
+            return "Error: LocalStack is not running. Please start it first using the start function."
             
         # Handle reset operation
         if reset:

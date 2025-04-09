@@ -28,7 +28,7 @@ This module uses Dagger's secret management system to handle sensitive data like
 
 ```bash
 export LOCALSTACK_AUTH_TOKEN=your-token-here
-dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up
+dagger call start --auth-token=env:LOCALSTACK_AUTH_TOKEN up
 ```
 
 The token will be then securely handled by Dagger and never exposed in logs or command output.
@@ -44,14 +44,14 @@ The token will be then securely handled by Dagger and never exposed in logs or c
 
 ### Configuration
 
-#### `serve`
+#### `start`
 
 | Input | Description | Default | Example |
 |-------|-------------|---------|---------|
-| `auth-token` | LocalStack Pro auth token (as Dagger secret) | `None` | `dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN` |
-| `configuration` | Configuration variables for LocalStack container | `None` | `dagger call serve --configuration='DEBUG=1,PERSISTENCE=1'` |
-| `docker-sock` | Unix socket path for Docker daemon | `None` | `dagger call serve --docker-sock=/var/run/docker.sock` |
-| `image-name` | Custom LocalStack image name | `None` | `dagger call serve --image-name=localstack/snowflake:latest` |
+| `auth-token` | LocalStack Pro auth token (as Dagger secret) | `None` | `dagger call start --auth-token=env:LOCALSTACK_AUTH_TOKEN` |
+| `configuration` | Configuration variables for LocalStack container | `None` | `dagger call start --configuration='DEBUG=1,PERSISTENCE=1'` |
+| `docker-sock` | Unix socket path for Docker daemon | `None` | `dagger call start --docker-sock=/var/run/docker.sock` |
+| `image-name` | Custom LocalStack image name | `None` | `dagger call start --image-name=localstack/snowflake:latest` |
 
 #### `state`
 
@@ -79,7 +79,7 @@ The token will be then securely handled by Dagger and never exposed in logs or c
 
 ```bash
 # Basic start
-dagger call serve up
+dagger call start up
 ```
 
 ### Start LocalStack Pro Edition
@@ -89,7 +89,7 @@ dagger call serve up
 export LOCALSTACK_AUTH_TOKEN=your-token-here
 
 # Basic start with auth token from environment
-dagger call serve --auth-token=env:LOCALSTACK_AUTH_TOKEN up
+dagger call start --auth-token=env:LOCALSTACK_AUTH_TOKEN up
 ```
 
 ## Development

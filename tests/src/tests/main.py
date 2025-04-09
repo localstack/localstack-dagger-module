@@ -22,7 +22,7 @@ class Tests:
     async def test_localstack_health(self) -> str:
         """Test if LocalStack starts and responds to /_localstack/info endpoint"""
         # Start LocalStack using the module
-        service = dag.localstack_dagger_module().serve()
+        service = dag.localstack_dagger_module().start()
         
         await service.start()
         endpoint = await service.endpoint()
@@ -47,7 +47,7 @@ class Tests:
     async def test_localstack_pro(self, auth_token: dagger.Secret) -> str:
         """Test if LocalStack starts with Pro services available"""
         # Start LocalStack Pro using the module
-        service = dag.localstack_dagger_module().serve(auth_token=auth_token)
+        service = dag.localstack_dagger_module().start(auth_token=auth_token)
         
         await service.start()
         endpoint = await service.endpoint()
@@ -76,7 +76,7 @@ class Tests:
     async def test_state_operations(self, auth_token: dagger.Secret) -> str:
         """Test LocalStack state operations (save/load/reset) with AWS resources"""
         # Start LocalStack Pro
-        service = dag.localstack_dagger_module().serve(auth_token=auth_token)
+        service = dag.localstack_dagger_module().start(auth_token=auth_token)
         await service.start()
         endpoint = await service.endpoint()
 
