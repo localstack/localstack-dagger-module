@@ -1,0 +1,40 @@
+name: LocalStack Dagger Module Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3 requests dagger-io
+
+      - name: "Set up Dagger"
+        id: "setup-dagger"
+        uses: "camptocamp/setup-dagger@v1"
+        with:
+          module-path: "."
+
+      - name: "Run tests"
+        run: |
+          cd tests
+          dagger call all --auth-token env:LOCALSTACK_AUTH_TOKEN 
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
