@@ -1,0 +1,13 @@
+{
+  "name": "tests",
+  "engineVersion": "v0.18.2",
+  "sdk": {
+    "source": "python"
+  },
+  "dependencies": [
+    {
+      "name": "localstack-dagger-module",
+      "source": ".."
+    }
+  ]
+}
