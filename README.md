@@ -53,8 +53,8 @@ export LOCALSTACK_AUTH_TOKEN="your-pro-token"
 
 # 2. Start LocalStack Pro using the token from the environment
 dagger -m github.com/localstack/localstack-dagger-module \
-    --auth-token=env:LOCALSTACK_AUTH_TOKEN \
-    call start up
+    call start --auth-token=env:LOCALSTACK_AUTH_TOKEN \
+    up
 ```
 
 If the token is invalid or missing when Pro usage is implied, LocalStack might behave unexpectedly or functionality might be limited.
