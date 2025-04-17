@@ -22,7 +22,7 @@ class Tests:
     async def test_localstack_health(self) -> str:
         """Test if LocalStack starts and responds to /_localstack/info endpoint"""
         # Start LocalStack using the module
-        service = dag.localstack_dagger_module().start()
+        service = dag.localstack().start()
         
         await service.start()
         endpoint = await service.endpoint()
@@ -47,7 +47,7 @@ class Tests:
     async def test_localstack_pro(self, auth_token: dagger.Secret) -> str:
         """Test if LocalStack starts with Pro services available"""
         # Start LocalStack Pro using the module
-        service = dag.localstack_dagger_module().start(auth_token=auth_token)
+        service = dag.localstack().start(auth_token=auth_token)
         
         await service.start()
         endpoint = await service.endpoint()
@@ -76,7 +76,7 @@ class Tests:
     async def test_state_operations(self, auth_token: dagger.Secret) -> str:
         """Test LocalStack state operations (save/load/reset) with AWS resources"""
         # Start LocalStack Pro
-        service = dag.localstack_dagger_module().start(auth_token=auth_token)
+        service = dag.localstack().start(auth_token=auth_token)
         await service.start()
         endpoint = await service.endpoint()
 
@@ -102,7 +102,7 @@ class Tests:
             )
 
             # Save state to Cloud Pod
-            state_module = dag.localstack_dagger_module()
+            state_module = dag.localstack()
             await state_module.state(
                 auth_token=auth_token,
                 save="test-dagger-pod",
@@ -155,7 +155,7 @@ class Tests:
         
         try:
             # Create an ephemeral instance
-            ephemeral_module = dag.localstack_dagger_module()
+            ephemeral_module = dag.localstack()
             create_response = await ephemeral_module.ephemeral(
                 auth_token=auth_token,
                 operation="create",
