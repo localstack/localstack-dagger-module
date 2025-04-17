@@ -291,7 +291,7 @@ wheels = [
 ]
 
 [[package]]
-name = "localstack-dagger-module"
+name = "localstack"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

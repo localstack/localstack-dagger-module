@@ -6,7 +6,7 @@
   },
   "dependencies": [
     {
-      "name": "localstack-dagger-module",
+      "name": "localstack",
       "source": "../.."
     }
   ]

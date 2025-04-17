@@ -9,7 +9,7 @@ import json
 
 
 @object_type
-class LocalstackDaggerModule:
+class Localstack:
     @function
     def start(
         self, 

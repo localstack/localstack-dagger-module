@@ -16,10 +16,10 @@ export class Example {
    * @returns Promise<void>
    */
   @func()
-  async localstack_dagger_module__quickstart() {
+  async localstack__quickstart() {
     await connect(async (client) => {
       // Start LocalStack using the module
-      const service = client.localstackDaggerModule().start()
+      const service = client.localstack().start()
       
       await service.start()
       const endpoint = await service.endpoint()
@@ -69,9 +69,9 @@ export class Example {
    * @returns Promise<void>
    */
   @func()
-  async localstack_dagger_module__pro(authToken: Secret) {
+  async localstack__pro(authToken: Secret) {
     await connect(async (client) => {
-      const service = client.localstackDaggerModule().start({
+      const service = client.localstack().start({
         authToken,
         configuration: "DEBUG=1,SERVICES=ecr",
       })
@@ -107,9 +107,9 @@ export class Example {
    * @returns Promise<void>
    */
   @func()
-  async localstack_dagger_module__state(authToken: Secret) {
+  async localstack__state(authToken: Secret) {
     await connect(async (client) => {
-      const service = client.localstackDaggerModule().start({
+      const service = client.localstack().start({
         authToken
       })
 
@@ -133,7 +133,7 @@ export class Example {
       console.log("Test bucket created")
 
       // Save state to Cloud Pod
-      await client.localstackDaggerModule().state({
+      await client.localstack().state({
         authToken,
         save: "test-dagger-example-pod",
         endpoint: `http://${endpoint}`
@@ -142,14 +142,14 @@ export class Example {
       console.log("State saved to Cloud Pod")
 
       // Reset state
-      await client.localstackDaggerModule().state({
+      await client.localstack().state({
         reset: true,
         endpoint: `http://${endpoint}`
       })
       console.log("State reset")
 
       // Load state back
-      await client.localstackDaggerModule().state({
+      await client.localstack().state({
         authToken,
         load: "test-dagger-example-pod",
         endpoint: `http://${endpoint}`
@@ -168,10 +168,10 @@ export class Example {
    * @returns Promise<void>
    */
   @func()
-  async localstack_dagger_module__ephemeral(authToken: Secret) {
+  async localstack__ephemeral(authToken: Secret) {
     await connect(async (client) => {
       // Create a new ephemeral instance
-      await client.localstackDaggerModule().ephemeral(
+      await client.localstack().ephemeral(
         authToken,
         "create",
         {
@@ -185,14 +185,14 @@ export class Example {
       await new Promise(resolve => setTimeout(resolve, 15000))
 
       // List instances
-      const listResponse = await client.localstackDaggerModule().ephemeral(
+      const listResponse = await client.localstack().ephemeral(
         authToken,
         "list"
       )
       console.log(`Ephemeral instances: ${listResponse}`)
 
       // Get instance logs
-      const instanceLogs = await client.localstackDaggerModule().ephemeral(
+      const instanceLogs = await client.localstack().ephemeral(
         authToken,
         "logs",
         {
@@ -202,7 +202,7 @@ export class Example {
       console.log(`Instance logs: ${instanceLogs}`)
 
       // Delete instance
-      await client.localstackDaggerModule().ephemeral(
+      await client.localstack().ephemeral(
         authToken,
         "delete",
         {
