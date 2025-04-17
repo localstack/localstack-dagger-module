@@ -156,12 +156,13 @@ Used to configure and start the main LocalStack service.
 
 Used to manage the state of a running LocalStack instance using Cloud Pods (Pro only).
 
-| Input        | Description                                                                          | Default   | Example                                          |
-| ------------ | ------------------------------------------------------------------------------------ | --------- | ------------------------------------------------ |
-| `auth-token` | LocalStack Pro Auth Token (as Dagger `Secret`). Required for `save` and `load`.      | `None`    | `dagger call state --auth-token=env:LOCALSTACK_AUTH_TOKEN` |
-| `load`       | Name of the LocalStack Cloud Pod to load into the running instance.                  | `None`    | `dagger call state --load=my-pod`                  |
-| `save`       | Name under which to save the current state as a LocalStack Cloud Pod.                | `None`    | `dagger call state --save=my-pod`                  |
-| `reset`      | If `true`, resets the state of the running LocalStack instance.                      | `False`   | `dagger call state --reset`                      |
+| Input        | Description                                                                          | Default                      | Example                                          |
+| ------------ | ------------------------------------------------------------------------------------ | ---------------------------- | ------------------------------------------------ |
+| `auth-token` | LocalStack Pro Auth Token (as Dagger `Secret`). Required for `save` and `load`.      | `None`                       | `dagger call state --auth-token=env:LOCALSTACK_AUTH_TOKEN` |
+| `load`       | Name of the LocalStack Cloud Pod to load into the running instance.                  | `None`                       | `dagger call state --load=my-pod`                  |
+| `save`       | Name under which to save the current state as a LocalStack Cloud Pod.                | `None`                       | `dagger call state --save=my-pod`                  |
+| `reset`      | If `true`, resets the state of the running LocalStack instance.                      | `False`                      | `dagger call state --reset`                      |
+| `endpoint`   | LocalStack endpoint to connect to.                                                   | `host.docker.internal:4566`  | `dagger call state --endpoint=localhost:4566`     |
 
 ### `ephemeral`
 
@@ -186,8 +187,8 @@ To contribute or make local changes to this module:
   cd localstack-dagger-module
   ```
 2. Run `dagger develop` to set up the development environment.
-3. Make your changes, typically within the Dagger module source files (e.g., in `.dagger/src/`).
-4. Test your changes locally using `dagger call` or `dagger test` as described in the sections above.
+3. Make your changes, typically within the Dagger module source files (e.g., in `src/localstack/main.py`).
+4. Test your changes locally using `dagger call` as described in the sections above.
 
 ## License
 
