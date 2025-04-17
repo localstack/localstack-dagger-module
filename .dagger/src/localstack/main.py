@@ -1,7 +1,13 @@
+"""LocalStack module for managing LocalStack instances and state.
+
+This module provides functions to start LocalStack containers, manage state through Cloud Pods,
+and handle ephemeral LocalStack instances in the cloud.
+"""
+
 import os
 import dagger
-from dagger import dag, function, object_type
-from typing import Optional
+from dagger import dag, function, object_type, Doc
+from typing import Optional, Annotated
 import base64
 from datetime import datetime
 import requests
@@ -10,30 +16,17 @@ import json
 
 @object_type
 class Localstack:
+    """LocalStack service management functions."""
+
     @function
     def start(
         self, 
-        auth_token: Optional[dagger.Secret] = None,
-        configuration: Optional[str] = None,
-        docker_sock: Optional[dagger.Socket] = None,
-        image_name: Optional[str] = None
+        auth_token: Annotated[Optional[dagger.Secret], Doc("LocalStack Pro Auth Token for authentication")] = None,
+        configuration: Annotated[Optional[str], Doc("Configuration variables in format 'KEY1=value1,KEY2=value2'")] = None,
+        docker_sock: Annotated[Optional[dagger.Socket], Doc("Docker socket for container interactions")] = None,
+        image_name: Annotated[Optional[str], Doc("Custom LocalStack image name to use")] = None
     ) -> dagger.Service:
-        """Start a LocalStack service with appropriate configuration.
-        
-        If image_name is provided, starts that specific image.
-        If auth_token is provided but no image_name, starts LocalStack Pro edition.
-        Otherwise starts LocalStack Community edition.
-        
-        Args:
-            auth_token: Optional secret containing LocalStack Pro auth token
-            configuration: Optional string of configuration variables in format "KEY1=value1,KEY2=value2"
-                         Example: "DEBUG=1,LS_LOG=trace"
-            docker_sock: Optional Docker socket for container interactions
-            image_name: Optional custom LocalStack image name to use
-            
-        Returns:
-            A running LocalStack service container
-        """
+        """Start a LocalStack service with appropriate configuration."""
         # Determine image based on parameters
         if image_name:
             image = image_name
@@ -47,7 +40,7 @@ class Localstack:
         if docker_sock:
             container = container.with_unix_socket("/var/run/docker.sock", docker_sock)
             
-        # Add auth token if provided
+        # Add Auth Token if provided
         if auth_token:
             container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
             
@@ -74,23 +67,13 @@ class Localstack:
     @function
     async def state(
         self,
-        auth_token: Optional[dagger.Secret] = None,
-        load: Optional[str] = None,
-        save: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        reset: bool = False
+        auth_token: Annotated[Optional[dagger.Secret], Doc("LocalStack Auth Token (required for save/load)")] = None,
+        load: Annotated[Optional[str], Doc("Name of the Cloud Pod to load")] = None,
+        save: Annotated[Optional[str], Doc("Name of the Cloud Pod to save")] = None,
+        endpoint: Annotated[Optional[str], Doc("LocalStack endpoint (defaults to host.docker.internal:4566)")] = None,
+        reset: Annotated[bool, Doc("Reset the LocalStack state")] = False
     ) -> str:
-        """Load, save, or reset LocalStack state.
-        
-        Args:
-            auth_token: Secret containing LocalStack auth token (required for save/load)
-            load: Name of the Cloud Pod to load
-            save: Name of the Cloud Pod to save
-            reset: Reset the LocalStack state
-            endpoint: LocalStack endpoint to use (optional, defaults to host.docker.internal:4566)
-        Returns:
-            Output from the pod operation or error message if LocalStack is not running
-        """
+        """Load, save, or reset LocalStack state."""
         # Base URL for LocalStack API
         localstack_url = endpoint or "http://host.docker.internal:4566"
         
@@ -140,7 +123,7 @@ class Localstack:
                     save_response.raise_for_status()
                     return save_response.text
                 except requests.RequestException:
-                    return f"Error: Failed to save pod '{save}'. Please check the pod name and your auth token."
+                    return f"Error: Failed to save pod '{save}'. Please check the pod name and your Auth Token."
             elif load:
                 try:
                     load_response = requests.put(
@@ -151,40 +134,28 @@ class Localstack:
                     load_response.raise_for_status()
                     return load_response.text
                 except requests.RequestException:
-                    return f"Error: Failed to load pod '{load}'. Please check the pod name and your auth token."
+                    return f"Error: Failed to load pod '{load}'. Please check the pod name and your Auth Token."
             
         return "No operation specified. Please provide either --load, --save, or --reset parameter."
 
     @function
     async def ephemeral(
         self,
-        auth_token: dagger.Secret,
-        operation: str,
-        name: Optional[str] = None,
-        lifetime: Optional[int] = None,
-        auto_load_pod: Optional[str] = None,
-        extension_auto_install: Optional[str] = None
+        auth_token: Annotated[dagger.Secret, Doc("LocalStack Auth Token (required)")],
+        operation: Annotated[str, Doc("Operation to perform (create, list, delete, logs)")],
+        name: Annotated[Optional[str], Doc("Name of the ephemeral instance (required for create, delete, logs)")] = None,
+        lifetime: Annotated[Optional[int], Doc("Lifetime of the instance in minutes (default: 60)")] = None,
+        auto_load_pod: Annotated[Optional[str], Doc("Auto load pod configuration")] = None,
+        extension_auto_install: Annotated[Optional[str], Doc("Extension auto install configuration")] = None
     ) -> str:
-        """Manage ephemeral LocalStack instances in the cloud.
-        
-        Args:
-            auth_token: LocalStack auth token (required)
-            operation: Operation to perform (create, list, delete, logs)
-            name: Name of the ephemeral instance (required for create, delete, logs)
-            lifetime: Lifetime of the instance in minutes (optional, default: 60)
-            auto_load_pod: Auto load pod configuration (optional)
-            extension_auto_install: Extension auto install configuration (optional)
-            
-        Returns:
-            Response from the API operation
-        """
+        """Manage ephemeral LocalStack instances in the cloud."""
         if not auth_token:
             return "Error: auth_token is required for ephemeral instance operations"
 
         # Base API endpoint
         api_endpoint = "https://api.localstack.cloud/v1"
         
-        # Get auth token value from secret
+        # Get Auth Token value from secret
         auth_token_value = await auth_token.plaintext()
         
         # Common headers
