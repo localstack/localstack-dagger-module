@@ -20,7 +20,8 @@
       "@dagger.io/dagger/telemetry": [
         "./sdk/src/telemetry"
       ]
-    }
+    },
+    "experimentalDecorators": true
   },
   "exclude": [
     "node_modules",
