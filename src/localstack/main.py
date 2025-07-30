@@ -1,9 +1,3 @@
-"""LocalStack module for managing LocalStack instances and state.
-
-This module provides functions to start LocalStack containers, manage state through Cloud Pods,
-and handle ephemeral LocalStack instances in the cloud.
-"""
-
 import os
 import dagger
 from dagger import dag, function, object_type, Doc
