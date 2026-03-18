@@ -13,16 +13,16 @@ class Tests:
     @function
     async def all(self, auth_token: dagger.Secret) -> str:
         """Run all tests"""
-        await self.test_localstack_health()
+        await self.test_localstack_health(auth_token=auth_token)
         await self.test_localstack_pro(auth_token=auth_token)
         await self.test_state_operations(auth_token=auth_token)
         await self.test_ephemeral_operations(auth_token=auth_token)
 
     @function
-    async def test_localstack_health(self) -> str:
+    async def test_localstack_health(self, auth_token: dagger.Secret) -> str:
         """Test if LocalStack starts and responds to /_localstack/info endpoint"""
         # Start LocalStack using the module
-        service = dag.localstack().start()
+        service = dag.localstack().start(auth_token=auth_token)
         
         await service.start()
         endpoint = await service.endpoint()
@@ -46,7 +46,7 @@ class Tests:
     @function
     async def test_localstack_pro(self, auth_token: dagger.Secret) -> str:
         """Test if LocalStack starts with Pro services available"""
-        # Start LocalStack Pro using the module
+        # Start LocalStack using the module
         service = dag.localstack().start(auth_token=auth_token)
         
         await service.start()
@@ -75,7 +75,7 @@ class Tests:
     @function
     async def test_state_operations(self, auth_token: dagger.Secret) -> str:
         """Test LocalStack state operations (save/load/reset) with AWS resources"""
-        # Start LocalStack Pro
+        # Start LocalStack
         service = dag.localstack().start(auth_token=auth_token)
         await service.start()
         endpoint = await service.endpoint()

@@ -6,9 +6,9 @@ import time
 @object_type
 class Example:
     @function
-    async def localstack__quickstart(self) -> str:
-        """Example showing how to start LocalStack Community edition."""
-        service = dag.localstack().start()
+    async def localstack__quickstart(self, auth_token: dagger.Secret) -> str:
+        """Example showing how to start LocalStack."""
+        service = dag.localstack().start(auth_token=auth_token)
         
         await service.start()
         endpoint = await service.endpoint()
@@ -41,8 +41,8 @@ class Example:
 
     @function
     async def localstack__pro(self, auth_token: dagger.Secret) -> str:
-        """Example showing how to start LocalStack Pro with custom configuration."""
-        # Start LocalStack Pro using the module
+        """Example showing how to start LocalStack with custom configuration."""
+        # Start LocalStack using the module
         service = dag.localstack().start(
             auth_token=auth_token,
             configuration="DEBUG=1,SERVICES=ecr"
@@ -50,7 +50,7 @@ class Example:
 
         await service.start()
         endpoint = await service.endpoint()
-        print(f"LocalStack Pro is running at {endpoint}")
+        print(f"LocalStack is running at {endpoint}")
 
         # Create a test ECR repository
         ecr = boto3.client(

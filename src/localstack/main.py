@@ -14,47 +14,40 @@ class Localstack:
 
     @function
     def start(
-        self, 
-        auth_token: Annotated[Optional[dagger.Secret], Doc("LocalStack Pro Auth Token for authentication")] = None,
+        self,
+        auth_token: Annotated[dagger.Secret, Doc("LocalStack Auth Token for authentication")],
         configuration: Annotated[Optional[str], Doc("Configuration variables in format 'KEY1=value1,KEY2=value2'")] = None,
         docker_sock: Annotated[Optional[dagger.Socket], Doc("Docker socket for container interactions")] = None,
         image_name: Annotated[Optional[str], Doc("Custom LocalStack image name to use")] = None
     ) -> dagger.Service:
         """Start a LocalStack service with appropriate configuration."""
         # Determine image based on parameters
-        if image_name:
-            image = image_name
-        else:
-            image = "localstack/localstack-pro:latest" if auth_token else "localstack/localstack:latest"
-        
+        image = image_name if image_name else "localstack/localstack:latest"
+
         # Start with base container config
         container = dag.container().from_(image)
-        
+
         # Mount Docker socket if provided
         if docker_sock:
             container = container.with_unix_socket("/var/run/docker.sock", docker_sock)
-            
-        # Add Auth Token if provided
-        if auth_token:
-            container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
-            
+
+        # Add Auth Token
+        container = container.with_secret_variable("LOCALSTACK_AUTH_TOKEN", auth_token)
+
         # Add configuration variables if provided
         if configuration:
             for config_pair in configuration.split(','):
                 if '=' in config_pair:
                     key, value = config_pair.strip().split('=', 1)
                     container = container.with_env_variable(key, value)
-            
-        # Add common ports (4566)
+
+        # Add common ports (4566 and 443)
         container = (
             container
             .with_exposed_port(4566)
+            .with_exposed_port(443)
         )
-        
-        # Add port 443 for Pro edition
-        if auth_token:
-            container = container.with_exposed_port(443)
-            
+
         # Return as service
         return container.as_service()
 
