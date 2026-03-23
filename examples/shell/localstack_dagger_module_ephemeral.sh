@@ -3,7 +3,7 @@
 # Check if LOCALSTACK_AUTH_TOKEN is set
 if [ -z "$LOCALSTACK_AUTH_TOKEN" ]; then
     echo "Error: LOCALSTACK_AUTH_TOKEN environment variable is not set"
-    echo "Please set your LocalStack Pro auth token:"
+    echo "Please set your LocalStack auth token:"
     echo "export LOCALSTACK_AUTH_TOKEN='your-token-here'"
     exit 1
 fi

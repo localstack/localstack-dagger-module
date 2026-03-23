@@ -23,8 +23,8 @@ import (
 type Golang struct{}
 
 // Starts LocalStack and performs example S3 operations
-func (m *Golang) LocalstackQuickstart(ctx context.Context) (string, error) {
-	service := dag.Localstack().Start()
+func (m *Golang) LocalstackQuickstart(ctx context.Context, authToken *dagger.Secret) (string, error) {
+	service := dag.Localstack().Start(authToken)
 
 	// Start the service and get endpoint
 	if _, err := service.Start(ctx); err != nil {
@@ -103,16 +103,14 @@ S3 object content: %s`, endpoint, string(data))
 	return output, nil
 }
 
-// Starts LocalStack Pro with custom configuration and creates an ECR repository
+// Starts LocalStack with custom configuration and creates an ECR repository
 func (m *Golang) LocalstackPro(ctx context.Context, authToken *dagger.Secret) (string, error) {
-	// Start LocalStack Pro using the module with custom configuration
-	service := dag.Localstack().Start(dagger.LocalstackStartOpts{
-		AuthToken: authToken,
-	})
+	// Start LocalStack using the module with custom configuration
+	service := dag.Localstack().Start(authToken)
 
 	// Start the service and wait for it to be ready
 	if _, err := service.Start(ctx); err != nil {
-		return "", fmt.Errorf("failed to start LocalStack Pro: %w", err)
+		return "", fmt.Errorf("failed to start LocalStack: %w", err)
 	}
 
 	endpoint, err := service.Endpoint(ctx)
@@ -152,7 +150,7 @@ func (m *Golang) LocalstackPro(ctx context.Context, authToken *dagger.Secret) (s
 		return "", fmt.Errorf("failed to create ECR repository: %w", err)
 	}
 
-	output := fmt.Sprintf(`LocalStack Pro is running at %s
+	output := fmt.Sprintf(`LocalStack is running at %s
 ECR repository '%s' created`, endpoint, repositoryName)
 
 	return output, nil
@@ -160,14 +158,12 @@ ECR repository '%s' created`, endpoint, repositoryName)
 
 // Demonstrates LocalStack state management using Cloud Pods
 func (m *Golang) LocalstackState(ctx context.Context, authToken *dagger.Secret) (string, error) {
-	// Start LocalStack Pro
-	service := dag.Localstack().Start(dagger.LocalstackStartOpts{
-		AuthToken: authToken,
-	})
+	// Start LocalStack
+	service := dag.Localstack().Start(authToken)
 
 	// Start the service and wait for it to be ready
 	if _, err := service.Start(ctx); err != nil {
-		return "", fmt.Errorf("failed to start LocalStack Pro: %w", err)
+		return "", fmt.Errorf("failed to start LocalStack: %w", err)
 	}
 
 	endpoint, err := service.Endpoint(ctx)

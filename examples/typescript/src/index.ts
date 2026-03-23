@@ -10,16 +10,17 @@ import { Readable } from "stream"
 @object()
 export class Example {
   /**
-   * Demonstrates basic LocalStack functionality using the community edition.
+   * Demonstrates basic LocalStack functionality.
    * Creates an S3 bucket and object to verify the setup is working correctly.
-   * 
+   *
+   * @param authToken - LocalStack authentication token
    * @returns Promise<void>
    */
   @func()
-  async localstack__quickstart() {
+  async localstack__quickstart(authToken: Secret) {
     await connect(async (client) => {
       // Start LocalStack using the module
-      const service = client.localstack().start()
+      const service = client.localstack().start({ authToken })
       
       await service.start()
       const endpoint = await service.endpoint()
@@ -62,10 +63,10 @@ export class Example {
   }
 
   /**
-   * Demonstrates LocalStack Pro functionality by starting a Pro instance
+   * Demonstrates LocalStack functionality with custom configuration
    * and creating an ECR repository.
-   * 
-   * @param authToken - LocalStack Pro authentication token
+   *
+   * @param authToken - LocalStack authentication token
    * @returns Promise<void>
    */
   @func()
@@ -78,7 +79,7 @@ export class Example {
 
       await service.start()
       const endpoint = await service.endpoint()
-      console.log(`LocalStack Pro is running at ${endpoint}`)
+      console.log(`LocalStack is running at ${endpoint}`)
 
       // Create ECR client
       const ecr = new ECRClient({
@@ -102,8 +103,8 @@ export class Example {
   /**
    * Demonstrates LocalStack state management functionality using Cloud Pods.
    * Creates a test bucket, saves state to a pod, resets state, and loads it back.
-   * 
-   * @param authToken - LocalStack Pro authentication token
+   *
+   * @param authToken - LocalStack authentication token
    * @returns Promise<void>
    */
   @func()
@@ -163,8 +164,8 @@ export class Example {
    * Demonstrates LocalStack ephemeral instance management.
    * Creates an ephemeral instance, lists instances, retrieves logs,
    * and cleans up by deleting the instance.
-   * 
-   * @param authToken - LocalStack Pro authentication token
+   *
+   * @param authToken - LocalStack authentication token
    * @returns Promise<void>
    */
   @func()
